@@ -9,8 +9,8 @@
  *
  * Uses the official bunq PHP SDK
  * https://github.com/bunq/sdk_php
- * 
- * 
+ *
+ *
  * bunq-to-lunchmoney functions
  */
 
@@ -23,14 +23,14 @@ use bunq\Model\Generated\Endpoint\MonetaryAccountBank;
 use bunq\Model\Generated\Endpoint\Payment;
 
 require_once(__DIR__ . '/vendor/autoload.php');
-require_once(__DIR__ . '/config.php');
+require_once(__DIR__ . '/config/config.php');
 
 /**
  * Start the bunq connection
  */
 function initBunqConnection()
 {
-    try 
+    try
     {
         if( bunqIsSandbox === false )
             $environmentType = BunqEnumApiEnvironmentType::PRODUCTION();
@@ -38,9 +38,9 @@ function initBunqConnection()
             $environmentType = BunqEnumApiEnvironmentType::SANDBOX();
 
         $apiContext = ApiContext::create(
-            $environmentType, 
-            bunqApiKey, 
-            bunqDeviceDescription, 
+            $environmentType,
+            bunqApiKey,
+            bunqDeviceDescription,
             bunqPermittedIps
         );
 
@@ -49,8 +49,8 @@ function initBunqConnection()
         $apiContext->save(bunqFileName);
 
         return $apiContext;
-    } 
-    catch (Exception $e) 
+    }
+    catch (Exception $e)
     {
         echo 'Problem with bunq connection: ' . $e->getMessage();
     }
@@ -84,7 +84,7 @@ function getUser()
  */
 function addCallbackUrl($user, $callbackUrl)
 {
-    try 
+    try
     {
         $user = getUser();
         $allCurrentNotificationFilter = $user->getNotificationFilters();
@@ -103,8 +103,8 @@ function addCallbackUrl($user, $callbackUrl)
             $NotificationFilterUrl = new NotificationFilterUrl('MUTATION', $callbackUrl);
             NotificationFilterUrlUserInternal::createWithListResponse([$NotificationFilterUrl]);
         }
-    } 
-    catch (Exception $e) 
+    }
+    catch (Exception $e)
     {
         echo $e->getMessage();
 
@@ -117,7 +117,7 @@ function addCallbackUrl($user, $callbackUrl)
  */
 function getBunqTransactions()
 {
-    try 
+    try
     {
         $Transactions = [];
 
@@ -126,16 +126,16 @@ function getBunqTransactions()
 
         foreach( $MonetaryAccountBankList->getValue() as $MonetaryAccountBank )
         {
-            if( $MonetaryAccountBank->getStatus() !== 'ACTIVE' ) 
+            if( $MonetaryAccountBank->getStatus() !== 'ACTIVE' )
                 continue;
-            
+
             $MonetaryAccountBankId = $MonetaryAccountBank->getId();
-            
-            if( 
-                is_array(lunchMoneyMapping) && 
-                count(lunchMoneyMapping) > 0 && 
-                !array_key_exists($MonetaryAccountBankId, lunchMoneyMapping) 
-            ) 
+
+            if(
+                is_array(lunchMoneyMapping) &&
+                count(lunchMoneyMapping) > 0 &&
+                !array_key_exists($MonetaryAccountBankId, lunchMoneyMapping)
+            )
                 continue;
 
             // Get payments for monetary account
@@ -144,8 +144,8 @@ function getBunqTransactions()
             foreach( $PaymentsList->getValue() as $Payment )
             {
                 $CreatedDateTime = DateTime::createFromFormat('Y-m-d H:i:s.u', $Payment->getCreated() );
-                
-                // Only sync recent transactions 
+
+                // Only sync recent transactions
                 if( strtotime($CreatedDateTime->format('c')) < strtotime('-7 day') )
                     continue;
 
@@ -163,12 +163,12 @@ function getBunqTransactions()
                     $transaction['asset_id'] = lunchMoneyMapping[$MonetaryAccountBankId];
 
                 array_push($Transactions, $transaction);
-            }   
+            }
         }
 
         return $Transactions;
-    } 
-    catch (Exception $e) 
+    }
+    catch (Exception $e)
     {
         echo $e->getMessage();
     }
@@ -179,13 +179,13 @@ function getBunqTransactions()
  */
 function listLunchMoneyAssets()
 {
-    try 
+    try
     {
         $ch = curl_init();
         curl_setopt($ch, CURLOPT_URL, lunchMoneyApiUrl . '/assets');
         curl_setopt($ch, CURLOPT_CUSTOMREQUEST, 'GET');
         curl_setopt($ch, CURLOPT_RETURNTRANSFER, 1);
-        curl_setopt($ch, CURLOPT_HTTPHEADER, [ 
+        curl_setopt($ch, CURLOPT_HTTPHEADER, [
             'Authorization: Bearer ' . lunchMoneyAccessToken,
         ]);
         $response = curl_exec($ch);
@@ -202,7 +202,7 @@ function listLunchMoneyAssets()
 
         return $response_array['assets'];
     }
-    catch (Exception $e) 
+    catch (Exception $e)
     {
         echo 'Lunch Money error: ' . $e->getMessage();
         return false;
@@ -214,7 +214,7 @@ function listLunchMoneyAssets()
  */
 function uploadLunchMoneyTransactions($transactions)
 {
-    try 
+    try
     {
         $json_array = [
             'transactions' => $transactions,
@@ -247,8 +247,8 @@ function uploadLunchMoneyTransactions($transactions)
             throw new Exception($response_array['message'], 1);
 
         return $response_array;
-    } 
-    catch (Exception $e) 
+    }
+    catch (Exception $e)
     {
         echo 'Lunch Money error: ' . $e->getMessage();
         return false;
